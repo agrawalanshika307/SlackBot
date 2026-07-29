@@ -1,0 +1,27 @@
+# ============================================================
+# AI Teammate – Python Dependencies
+# ============================================================
+
+# FastAPI web framework
+fastapi>=0.111.0
+
+# ASGI server
+uvicorn[standard]>=0.30.0
+
+# Pydantic settings (env var loading + validation)
+pydantic-settings>=2.2.0
+
+# Google Gemini API (current SDK — replaces deprecated google-generativeai)
+google-genai>=1.0.0
+
+# MCP SDK (Model Context Protocol – client + server)
+mcp>=1.0.0
+
+# Slack SDK (used by the MCP server to talk to Slack)
+slack-sdk>=3.27.0
+
+# .env file loading
+python-dotenv>=1.0.0
+
+# Async HTTP client (used by Slack SDK internally)
+httpx>=0.27.0
