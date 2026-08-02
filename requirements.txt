@@ -23,5 +23,8 @@ slack-sdk>=3.27.0
 # .env file loading
 python-dotenv>=1.0.0
 
+# Retrieval / vector database
+chromadb>=0.4.0
+
 # Async HTTP client (used by Slack SDK internally)
 httpx>=0.27.0
