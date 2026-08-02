@@ -46,6 +46,42 @@ Slack (@mention)                 User (direct REST call)
 
 ---
 
+## Input / Process / Output
+
+- **Input**
+  - A Slack mention event sent to `/slack/events` when a user tags the bot.
+  - A REST request sent to `POST /chat/` with a natural-language query.
+
+- **Process**
+  1. FastAPI receives the request and validates configuration.
+  2. The orchestrator starts an MCP subprocess and discovers available tools.
+  3. The retriever fetches relevant context from the local Chroma vector store.
+  4. Gemini receives the user's prompt, tool metadata, and retrieved context.
+  5. If Gemini requests a tool, the orchestrator executes it via MCP and returns the result.
+  6. Gemini then generates the final natural-language answer.
+
+- **Output**
+  - For REST calls: a JSON response with the answer and metadata about tool usage.
+  - For Slack mentions: a threaded reply posted back into the Slack channel.
+
+---
+
+## Tools Used and Why
+
+| Tool / Technology | Purpose | Why it's used |
+|---|---|---|
+| `FastAPI` | HTTP API server | Lightweight, modern async framework for REST and Slack event handling |
+| `uvicorn` | ASGI server | Fast, production-ready runtime for FastAPI |
+| `google-genai` | Gemini LLM and embeddings | Provides Gemini reasoning and native embeddings without extra model hosting |
+| `MCP` | Tool orchestration | Separates reasoning from tool execution and enables manual function-calling loops |
+| `Slack SDK` | Slack Web API client | Authenticates and interacts with Slack from the MCP server |
+| `Chroma` | Local vector database | Stores embeddings for retrieval-augmented generation and speed |
+| `pydantic-settings` | Environment config | Validates required secrets and makes configuration robust |
+| `python-dotenv` | `.env` loading | Loads local environment variables for development |
+| `httpx` | Async HTTP transport | Used by Slack SDK and Gemini client for async requests |
+
+---
+
 ## Project Structure
 
 ```
@@ -190,7 +226,26 @@ https://a1b2c3d4.ngrok-free.app/slack/events
 
 ---
 
-## Installation
+## Retrieval and Vector Search
+
+This project now includes retrieval-augmented generation using a local vector store.
+
+- `app/llm/retriever.py` — indexes text with Gemini native embeddings into a local Chroma database.
+- `scripts/build_vector_index.py` — helper script for indexing files like `README.md`.
+- The orchestrator now queries the vector store before sending the user's prompt to Gemini,
+  so the model can answer using retrieved context and reduce hallucinations.
+
+To index a file and populate the vector store:
+
+```bash
+python scripts/build_vector_index.py README.md --id project-readme --source local-doc
+```
+
+Then ask the bot a question—the retrieved context will be included automatically.
+
+## Project Setup
+
+This section shows how to set up the project locally for development and demo use.
 
 ### 1. Navigate to the project directory
 
@@ -246,7 +301,7 @@ On startup you'll see:
 
 ```
 ✅ Configuration loaded successfully.
-   Gemini model : gemini-2.0-flash
+   Gemini model : gemini-3.5-flash
    MCP server   : mcp_server/slack_mcp_server.py
    Slack token  : xoxb-123…
    Bot user ID  : U12345678
@@ -345,8 +400,11 @@ Reads recent messages from a Slack channel.
 | `SLACK_BOT_TOKEN` | ✅ | Slack Bot User OAuth Token (`xoxb-...`) |
 | `SLACK_SIGNING_SECRET` | ✅ | Slack App signing secret (for event verification) |
 | `SLACK_BOT_USER_ID` | ❌ | Bot's Slack user ID — auto-fetched at startup if empty |
-| `GEMINI_MODEL` | ❌ | Gemini model name (default: `gemini-2.0-flash`) |
+| `GEMINI_MODEL` | ❌ | Gemini model name (default: `gemini-3.5-flash`) |
 | `MCP_SERVER_SCRIPT` | ❌ | Path to MCP server script (default: `mcp_server/slack_mcp_server.py`) |
+| `RETRIEVAL_STORE_PATH` | ❌ | Local vector store path for Chroma (default: `vector_db`) |
+| `RETRIEVAL_TOP_K` | ❌ | Number of retrieved chunks included in the prompt (default: `5`) |
+| `RETRIEVAL_EMBEDDING_MODEL` | ❌ | Gemini embedding model (default: `text-embedding-3-small`) |
 
 ---
 

@@ -100,8 +100,20 @@ app.include_router(slack_events.router)
 
 @app.get("/health", tags=["Health"], summary="Liveness check")
 async def health() -> dict:
-    """Returns 200 OK if the server is running."""
-    return {"status": "ok", "service": "ai-teammate"}
+    """Returns 200 OK if the server is running and the vector store status."""
+    from app.llm.retriever import get_retriever
+
+    retriever = get_retriever()
+    populated = retriever.is_populated()
+    return {
+        "status": "ok",
+        "service": "ai-teammate",
+        "vector_store": {
+            "path": str(retriever.persist_directory),
+            "populated": populated,
+            "document_count": retriever.count(),
+        },
+    }
 
 
 @app.get("/", tags=["Root"], summary="API information")
