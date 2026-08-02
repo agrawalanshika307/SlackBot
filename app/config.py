@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     # Path to the Slack MCP Server script, relative to project root.
     mcp_server_script: str = "mcp_server/slack_mcp_server.py"
 
+    # Retrieval settings
+    retrieval_store_path: str = "vector_db"
+    retrieval_top_k: int = 5
+    retrieval_embedding_model: str = "all-MiniLM-L6-v2"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

@@ -29,6 +29,7 @@ from dataclasses import dataclass
 
 from app.config import get_settings
 from app.llm.gemini_client import GeminiClient
+from app.llm.retriever import get_retriever
 from app.mcp.mcp_client import MCPClient
 
 log = logging.getLogger(__name__)
@@ -97,9 +98,28 @@ async def process(user_message: str) -> OrchestratorResult:
             mcp_tools=mcp_tools,
         )
 
+        # ── Retrieval augmentation (optional) ─────────────────────────────────
+        retriever = get_retriever(
+            persist_directory=settings.retrieval_store_path,
+            embedding_model_name=settings.retrieval_embedding_model,
+        )
+        context_chunks = retriever.get_context(user_message, k=settings.retrieval_top_k)
+        if context_chunks:
+            augmented_message = (
+                "Use the following retrieved context from the local knowledge store "
+                "to answer the user's question. Only use facts visible in the context "
+                "when relevant, and do not hallucinate new details.\n\n"
+                "Retrieved context:\n"
+                + "\n\n".join(context_chunks)
+                + "\n\nUser question:\n"
+                + user_message
+            )
+        else:
+            augmented_message = user_message
+
         # ── Step 4: Send user message to Gemini ───────────────────────────────
         log.info("Step 4: Sending user message to Gemini …")
-        first_response = gemini.send_message(user_message)
+        first_response = gemini.send_message(augmented_message)
 
         # ── Step 5: Check if Gemini wants to call a tool ──────────────────────
         function_call_part = GeminiClient.extract_function_call_part(first_response)
